@@ -116,24 +116,36 @@ if using react
 ```npm install react react-dom```
 
 ### 2. Connect to Ethereum
-`import { ethers } from "ethers";
+`import {BrowserProvider, Contract, parseEther, formatEther } from 'ethers';
 // Prompt user to connect wallet
-async function connectWallet() {
-  if (window.ethereum) {
-    await window.ethereum.request({ method: "eth_requestAccounts" });
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const signer = provider.getSigner();
-    return { provider, signer };
-  } else {
-    alert("Please install MetaMask!");
-  }
-}`
+useEffect(() => {
+    async function initEthers() {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          setAccount(accounts[0]);
+          // ETHERS V6 SYNTAX: BrowserProvider
+          const web3Provider = new BrowserProvider(window.ethereum);
+          // ETHERS V6 SYNTAX: getSigner is now async
+          const signerInstance = await web3Provider.getSigner();
+          const crowdfundingContract = new Contract(
+            contractAddress,
+            [ContractABI].abi,
+            signerInstance
+          );
+          setContract(crowdfundingContract);
+          // Listeners for account/network changes
+          window.ethereum.on('accountsChanged', () => window.location.reload());
+          window.ethereum.on('chainChanged', () => window.location.reload());
+        } catch (error) {
+          console.error("Connection error:", error);
+          setNetworkError("Failed to connect to MetaMask.");
+        }
+      } else {
+        setNetworkError("Please install MetaMask!");
+      }
+    }
+    initEthers();
+   }, []);`
 
-### 3. Load the contract
-`import CrowdfundingAbi from "./Crowdfunding.json"; // ABI generated from compilation
-const contractAddress = "0xYourDeployedContractAddress";
-async function getContract(signer) {
-  const contract = new ethers.Contract(contractAddress, CrowdfundingAbi.abi, signer);
-  return contract;
-}`
 
